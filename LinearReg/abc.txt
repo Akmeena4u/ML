@@ -1,0 +1,200 @@
+------------------LINEAR REGRESSION----------------------------------
+
+# 1. Write a program to implement linear regression with following instructions.
+# a. Generate data from uniform distribution and add some random gaussian
+# noise.
+# b. Split the data into training and testing datasets.
+# c. Use gradient descent optimization method for updating the parameters.
+# d. Apply l1 and l2 regularization methods.
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Define the linear regression model
+def linear_regression(X, theta):
+    return np.dot(X, theta.transpose())
+
+# Define the mean squared error loss function
+def mean_squared_error(y_pred, y_true):
+    return np.mean((y_pred - y_true) ** 2)
+
+# Define the L1 regularization penalty function
+def l1_penalty(theta, alpha):
+    return alpha * np.sum(np.abs(theta))
+
+# Define the L2 regularization penalty function
+def l2_penalty(theta, alpha):
+    return alpha * np.sum(theta ** 2)
+
+# Generate some random data
+X = np.random.uniform(0, 1, (100, 1))
+y = 2 * X + 1 + 0.1 * np.random.randn(100, 1)
+
+# Split the data into training and testing sets
+X_train, y_train = X[:80], y[:80]
+X_test, y_test = X[80:], y[80:]
+
+# Initialize the model parameters and learning rate
+theta = np.zeros((2, 1))
+alpha = 0.01
+
+# Set the number of iterations and regularization parameter
+num_iters = 1000
+lambda_l1 = 0.1
+lambda_l2 = 0.1
+
+# Create a list to store the training and testing losses for each iteration
+train_losses, test_losses = [], []
+
+# Train the model using gradient descent
+for i in range(num_iters):
+    # Compute the predictions and errors for the training set
+    y_pred_train = linear_regression(X_train, theta)
+    train_error = y_pred_train - y_train
+    
+    # Compute the predictions and errors for the testing set
+    y_pred_test = linear_regression(X_test, theta)
+    test_error = y_pred_test - y_test
+    
+    # Compute the gradients and update the parameters using L1 regularization
+    l1_gradient = lambda_l1 * np.sign(theta)
+    theta -= alpha * ((X_train.T @ train_error).T + l1_gradient)
+    
+    # Compute the gradients and update the parameters using L2 regularization
+    l2_gradient = lambda_l2 * theta
+    theta -= alpha * ((X_train.T @ train_error).T + l2_gradient)
+    
+    # Compute and record the training and testing losses for this iteration
+    train_loss = mean_squared_error(y_pred_train, y_train) + l1_penalty(theta, lambda_l1) + l2_penalty(theta, lambda_l2)
+    test_loss = mean_squared_error(y_pred_test, y_test) + l1_penalty(theta, lambda_l1) + l2_penalty(theta, lambda_l2)
+    train_losses.append(train_loss)
+    test_losses.append(test_loss)
+
+# Print the final parameters and losses
+print("Final Parameters:", theta)
+print("Final Training Loss:", train_losses[-1])
+print("Final Testing Loss:", test_losses[-1])
+
+# Plot the training and testing losses over the iterations
+plt.plot(train_losses, label='Training Loss')
+plt.plot(test_losses, label='Testing Loss')
+plt.legend()
+plt.title("Loss vs Iterations")
+plt.xlabel("Iterations")
+plt.ylabel("Loss")
+plt.show()
+
+# Plot the data and regression line
+plt.scatter(X, y, color='red')
+plt.plot(X, linear_regression(X, theta), color='blue')
+plt.title("Linear Regression")
+plt.xlabel("X")
+plt.ylabel("Y")
+plt.show()
+
+
+------------------Multi-LINEAR REGRESSION and POLYNOMIAL ----------------------------------
+
+# 2. Write a program to implement multiple linear regression and polynomial regression using the same instructions as above.
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Generate some random data for multiple linear regression
+X = np.random.rand(100, 2)
+y = 2*X[:, 0] + 3*X[:, 1] + 4*np.random.randn(100)
+
+# Add a column of ones to X for the intercept term
+X = np.column_stack((np.ones(len(X)), X))
+
+# Calculate the coefficients using the normal equation
+coefficients = np.linalg.inv(X.T @ X) @ X.T @ y
+
+# Print the coefficients
+print("Multiple Linear Regression Coefficients:", coefficients)
+
+# Generate some random data for polynomial regression
+X = np.random.rand(100, 1)
+y = 2*X[:, 0]**2 + 3*X[:, 0] + 4*np.random.randn(100)
+
+# Add columns of higher order powers of X to X for the polynomial terms
+X_poly = np.column_stack((np.ones(len(X)), X, X**2))
+
+# Calculate the coefficients using the normal equation
+poly_coefficients = np.linalg.inv(X_poly.T @ X_poly) @ X_poly.T @ y
+
+# Print the coefficients
+print("Polynomial Regression Coefficients:", poly_coefficients)
+
+# Plot the data and regression lines for polynomial regression
+plt.scatter(X[:, 0], y, color='red')
+plt.plot(X[:, 0], X_poly @ poly_coefficients, color='blue')
+plt.title("Polynomial Regression")
+plt.xlabel("X")
+plt.ylabel("y")
+plt.show()
+
+
+
+
+------------------LOGISTIC REGRESSION----------------------------------
+
+
+# Step 1: Load the dataset and import the necessary libraries
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+
+heart_df = pd.read_csv('heart.csv')
+
+# Step 2: Perform necessary preprocessing operations
+# Handle missing data
+heart_df = heart_df.fillna(heart_df.median())
+
+# Convert categorical data to numerical data
+heart_df = pd.get_dummies(heart_df, columns=['sex', 'cp', 'fbs', 'restecg', 'exang', 'slope', 'ca', 'thal'])
+
+# Scale the data
+from sklearn.preprocessing import StandardScaler
+sc = StandardScaler()
+heart_df.iloc[:, :-1] = sc.fit_transform(heart_df.iloc[:, :-1])
+
+# Step 3: Split the data into training and testing sets
+X = heart_df.iloc[:, :-1].values
+y = heart_df.iloc[:, -1].values
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Step 4: Define the logistic regression model
+def sigmoid(z):
+    return 1 / (1 + np.exp(-z))
+
+def predict(X, theta):
+    return sigmoid(X.dot(theta))
+
+# Step 5: Define the cost function and gradient descent optimization method
+def cost_function(X, y, theta):
+    m = len(y)
+    h = predict(X, theta)
+    cost = (-1 / m) * np.sum(y * np.log(h) + (1 - y) * np.log(1 - h))
+    return cost
+
+def gradient_descent(X, y, theta, alpha, iterations):
+    m = len(y)
+    for i in range(iterations):
+        h = predict(X, theta)
+        gradient = (1 / m) * X.T.dot(h - y)
+        theta = theta - alpha * gradient
+    return theta
+
+# Step 6: Train the model on the training set
+theta = np.zeros(X_train.shape[1])
+alpha = 0.01
+iterations = 1000
+theta = gradient_descent(X_train, y_train, theta, alpha, iterations)
+
+# Step 7: Test the model on the testing set and evaluate its performance
+from sklearn.metrics import accuracy_score
+
+y_pred = np.round(predict(X_test, theta))
+accuracy = accuracy_score(y_test, y_pred)
+print("Accuracy: {:.2f}%".format(accuracy * 100))
